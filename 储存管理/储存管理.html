@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>储存管理</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #a7efc1;
+            color: rgb(255, 255, 255);
+            font-size: 14px;
+            font-family: Verdana, Arial, Helvetica, sans-serif;
+        }
+        
+        .Show {
+            width: 1000px;
+            height: 5800px;
+            background-color: rgba(140, 180, 245, 0.5);
+            margin: auto;
+        }
+        
+        li {
+            word-wrap: break-word;
+            white-space: normal;
+            margin-top: 10px;
+            margin-right: 40px;
+            line-height: 25px;
+            list-style: none;
+            background-color: #73afb6;
+        }
+        
+        #Allresult li {
+            line-height: 35px;
+            font-size: 700;
+        }
+        
+        button {
+            height: 30px;
+            margin-top: 20px;
+            margin-left: 40px;
+            background-color: #a7efc1;
+            border-color: #fff;
+            color: rgb(65, 68, 68);
+        }
+        
+        button:hover {
+            color: rgb(80, 43, 106);
+            height: 35x;
+            padding: 5px;
+            border-radius: 10px;
+        }
+        
+        .Mybody {
+            width: 800px;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="MyTable">
+        <div class="Show">
+            <div style="margin: 25px, 25px ;color: #fff;;">
+                <button id="Numofblock">请点击运行</button>
+                <button style="display:none" id="OPT">OPT(最佳淘汰算法)</button>
+                <button style="display:none" id="FIFO">FIFO(先进先出算法)</button>
+                <button style="display:none" id="LRU">LRU(最近最少使用算法)</button>
+                <button style="display:none" id="LFR">LFR(最少访问页面算法)</button>
+                <button id="AllAlgorithm">点击比较调用的算法</button>
+            </div>
+            <div>
+                <ul id="Allresult"></ul>
+            </div>
+            <div>
+                <ul id="Myshow">
+                </ul>
+            </div>
+
+        </div>
+        <script>
+            /* -----------------  1. 生成地址流与页面流---------- */
+            // 页面流
+            let Pages = [];
+            for (let i = 0; i < 32; i++) {
+                let page = [];
+                for (let j = 0; j < 10; j++) {
+                    page[j] = i * 10 + j;
+                }
+                Pages.push(page);
+            }
+            // 生成指令的地址   地址流
+            let AddStream = [];
+            let count = 0;
+            while (count < 320) {
+                let m = Math.floor(Math.random() * 320);
+                AddStream.push(m);
+                AddStream.push(m + 1);
+                count++;
+                // 前地址部分
+                let m1 = Math.floor(Math.random() * (m + 1) + 1);
+                AddStream.push(m1);
+                AddStream.push(m1 + 1);
+                count += 2;
+                // 后地址部分
+                let m2 = Math.floor(Math.random() * (320 - m1 - 2)) + m1 + 2;
+                count++;
+                AddStream.push(m2);
+                count++;
+            }
+            console.log(AddStream);
+
+            // 根据生成的地址的指令，得出要调用的页面的序列
+            let ExecuPageSequen = [];
+            let flag = -1;
+            let IndexOfpage = 0;
+            let j = 0;
+            for (let i = 0; i < AddStream.length; i++) {
+                IndexOfpage = Math.floor(AddStream[i] / 10);
+                ExecuPageSequen[i] = IndexOfpage;
+            }
+            console.log(ExecuPageSequen);
+            let ExcuLen = ExecuPageSequen.length;
+
+            /* ------------2.显示生成的地址序列和要执行的页面序列------------- */
+            let Myshow = document.querySelector("#Myshow");
+            let Resultul = document.querySelector("#Allresult");
+            let li2 = document.createElement('li');
+            li2.innerHTML = `执行的页面的序列为：${ExecuPageSequen.slice().join(' | ')}`;
+            Myshow.prepend(li2);
+            let li1 = document.createElement("li");
+            li1.innerHTML = `生成的指令序列是: ${AddStream.slice().join(' | ')}`;
+            Myshow.prepend(li1);
+
+            var AllResult = [];
+            document.querySelector("#Numofblock").addEventListener('click', function() {
+                for (let j = 2; j <= 32; j++) {
+                    Opt(j);
+                    Fifo(j);
+                    Lru(j);
+                    Lfr(j);
+                }
+            });
+            /* -------------------3,算法实现区---------------------------- */
+            function Opt(Size) {
+                console.log("OPT算法触发成功");
+                let Blocks = new Array(Size).fill(-1);
+                console.log(Blocks);
+                let BlocksofSize = Blocks.length;
+                console.log(BlocksofSize);
+                let CountMiss = 0;
+                let Result = [];
+                let Isfull = false;
+                let RecordDisdance = [];
+                for (let i = 0; i < ExcuLen; i++) {
+                    if (!Blocks.includes(ExecuPageSequen[i])) {
+                        // 当物理块装满之后要进行进一步的判断
+                        Isfull = (CountMiss == BlocksofSize) ? true : Isfull;
+                        CountMiss++;
+                        // 在没有装满之前的不会置换但是一直发生缺页
+                        if (!Isfull) {
+                            Blocks[i] = ExecuPageSequen[i];
+                            Result.push(`缺页调入${ExecuPageSequen[i]}`);
+                        }
+                        if (Isfull) {
+                            let replaceIndex = 0;
+                            for (let t = 0; t < BlocksofSize; t++) {
+                                // 将物理块中的不同的页面距离最近一个相同的页面的最近距离记录下来
+                                RecordDisdance[t] = ExecuPageSequen.indexOf(Blocks[t], i);
+                            }
+                            if (RecordDisdance.includes(-1)) { //假如页面在后面不在出现就将它置换出去
+                                replaceIndex = RecordDisdance.indexOf(-1);
+                            } else {
+                                replaceIndex = RecordDisdance.indexOf(Math.max(...RecordDisdance)); //假如后面都有就找一个最远的替换
+                            }
+                            Result.push(`调用${ExecuPageSequen[i]}发生缺页置换出${Blocks[replaceIndex]}`);
+                            Blocks[replaceIndex] = ExecuPageSequen[i]; //发生缺页置换
+                        }
+                    } else {
+                        Result.push(`存在页面${ExecuPageSequen[i]}`);
+                    }
+                }
+                Result.unshift(`OPT算法执行情况为: 物理块大小为: ${BlocksofSize} 执行的页面序列的长度为：${ExcuLen} 置换次数为${CountMiss - BlocksofSize}  缺页次数为${CountMiss} 命中率为：${(1 - CountMiss / ExcuLen).toFixed(10)}`);
+                AllResult.push(`物理块大小为：${BlocksofSize}OPT算法执行情况:置换次数为${CountMiss - BlocksofSize}  缺页次数为${CountMiss}  命中率为：${(1 - CountMiss / ExcuLen).toFixed(10)}`)
+                let showResult = Result.slice().join(' | ');
+                let show = document.createElement("li");
+                show.innerHTML = `OPT算法的执行情况为: ${showResult}`;
+                Myshow.prepend(show);
+                console.log(BlocksofSize);
+
+            }
+
+            //-------------------3.3FIFO算法
+            function Fifo(Size) {
+                console.log("FIFO算法触发成功");
+                clearscreen(Resultul);
+                let Blocks = new Array(Size).fill(-1);
+                console.log(Blocks);
+                let BlocksofSize = Blocks.length;
+                console.log(BlocksofSize);
+                let IsFull = false;
+                let Result = [],
+                    replaceIndex1 = 0,
+                    count = 0;
+                CountMiss = 0;
+                for (let i = 0; i < ExcuLen; i++) {
+                    // 当调用的页面不在物理块中的时候
+                    if (!Blocks.includes(ExecuPageSequen[i])) {
+                        IsFull = CountMiss == BlocksofSize ? true : IsFull;
+                        CountMiss++;
+                        // 在物理块没有装满的时候会一直发生缺页
+                        if (!IsFull) {
+                            Result.push(`调用页面${ExecuPageSequen[i]}发生缺页`);
+                            Blocks[i] = ExecuPageSequen[i];
+                        }
+
+                        if (IsFull) {
+                            replaceIndex1 = count % BlocksofSize; //设计此算法让物理块实现循环效果
+                            Result.push(`调用页面${ExecuPageSequen[i]}发生缺页置换出${Blocks[replaceIndex1]}`);
+                            Blocks[replaceIndex1] = ExecuPageSequen[i];
+                            count++;
+
+                        }
+                    } else {
+                        Result.push(`页面${ExecuPageSequen[i]}存在`);
+                    }
+                }
+                // 将结果显示出来
+                Result.unshift(`FIFO算法情况为: 物理块大小为: ${BlocksofSize} 执行的页面序列的长度为：${ExcuLen}置换次数为${CountMiss - BlocksofSize}  缺页次数为${CountMiss}命中率为：${(1 - CountMiss / ExcuLen).toFixed(10)}`);
+                AllResult.push(`物理块大小为：${BlocksofSize} FIFO算法执行情况:置换次数为${CountMiss - BlocksofSize}缺页次数为${CountMiss} 命中率为：${(1 - CountMiss / ExcuLen).toFixed(10)}`)
+                let showResult = Result.slice().join(' | ');
+                let show = document.createElement("li");
+                show.innerHTML = `FIFO算法的执行情况为: ${showResult}`;
+                Myshow.prepend(show);
+                console.log(BlocksofSize);
+
+            }
+
+            // -----------------3.4LRU算法
+            function Lru(Size) {
+                console.log("LRU算法触发成功");
+                clearscreen(Resultul);
+                let Blocks = new Array(Size).fill(-1);
+                console.log(Blocks);
+                let BlocksofSize = Blocks.length;
+                console.log(BlocksofSize);
+                let Result = [];
+                let IsFull = false;
+                CountMiss = 0;
+                for (let i = 0; i < ExcuLen; i++) {
+                    if (!Blocks.includes(ExecuPageSequen[i])) {
+                        // 当物理块装满之后要进行进一步的判断
+                        IsFull = (CountMiss == BlocksofSize) ? true : IsFull;
+                        CountMiss++;
+                        // 在没有装满之前的不会置换但是一直发生缺页
+                        if (!IsFull) {
+                            Blocks[i] = ExecuPageSequen[i];
+                            Result.push(`缺页调入${ExecuPageSequen[i]}`);
+                        }
+                        if (IsFull) {
+                            let RecordDisdance1 = [];
+                            RecordDisdance1.length = BlocksofSize;
+                            let replaceIndex1 = 0;
+                            for (let t = 0; t < BlocksofSize; t++) {
+                                // 将物理块中的不同的页面距离最近一个相同的页面的最近距离记录下来
+                                RecordDisdance1[t] = ExecuPageSequen.lastIndexOf(Blocks[t], i);
+
+                            }
+                            if (RecordDisdance1.includes(-1)) { //
+                                replaceIndex1 = RecordDisdance1.indexOf(-1);
+                            } else {
+                                replaceIndex1 = RecordDisdance1.indexOf(Math.min(...RecordDisdance1)); //找前面的一个最远的替换
+                            }
+                            Result.push(`调用${ExecuPageSequen[i]}发生缺页置换出${Blocks[replaceIndex1]}`);
+                            Blocks[replaceIndex1] = ExecuPageSequen[i]; //发生缺页置换
+                        }
+                    } else {
+                        Result.push(`存在页面 ${ExecuPageSequen[i]}`);
+                    }
+                }
+                Result.unshift(`LRU算法执行情况为:物理块大小为: ${BlocksofSize} 执行的页面序列的长度为：${ExcuLen}置换次数为${CountMiss - BlocksofSize}  缺页次数为${CountMiss} 命中率为：${(1 - CountMiss / ExcuLen).toFixed(10)}`);
+                AllResult.push(`物理块大小为：${BlocksofSize} LRU算法执行情况:置换次数为${CountMiss - BlocksofSize} 缺页次数为${CountMiss} 命中率为：${(1 - CountMiss / ExcuLen).toFixed(10)}`);
+                let showResult = Result.slice().join(' | ');
+                let show = document.createElement("li");
+                show.innerHTML = `LRU算法的执行情况为: ${showResult}`;
+                Myshow.prepend(show);
+
+                console.log(BlocksofSize);
+            }
+
+            //设计一个函数实现数组在一定的范围内某一个数出现的次数
+            function CountOccurrences(arr, endIndex, target) {
+                let count = 0;
+                for (let i = 0; i < endIndex; i++) {
+                    if (arr[i] === target) {
+                        count++;
+                    }
+                }
+                return count;
+            }
+
+            // -----------------3.5LFR算法
+            function Lfr(Size) {
+                console.log("LFR算法触发成功");
+                clearscreen(Resultul);
+                let Blocks = new Array(Size).fill(-1);
+                console.log(Blocks);
+                let BlocksofSize = Blocks.length;
+                console.log(BlocksofSize);
+                CountMiss = 0;
+                let Result = [];
+                let IsFull = false;
+                for (let i = 0; i < ExcuLen; i++) {
+                    if (!Blocks.includes(ExecuPageSequen[i])) {
+                        // 当物理块装满之后要进行进一步的判断
+                        IsFull = (CountMiss == BlocksofSize) ? true : IsFull;
+                        CountMiss++;
+                        // 在没有装满之前的不会置换但是一直发生缺页
+                        if (!IsFull) {
+                            Blocks[i] = ExecuPageSequen[i];
+                            Result.push(`缺页调入${ExecuPageSequen[i]}`);
+                        }
+                        if (IsFull) {
+                            const Recordcount = [];
+                            Recordcount.length = BlocksofSize;
+                            let replaceIndex3 = 0;
+                            for (let t = 0; t < BlocksofSize; t++) {
+                                // 调用counocurrences函数将物理快中的各个页面出现的次数保存到Recordcount
+                                Recordcount[t] = CountOccurrences(ExecuPageSequen, i, Blocks[t]);
+                            }
+                            replaceIndex3 = Recordcount.indexOf(Math.min(...Recordcount));
+                            Result.push(`调用${ExecuPageSequen[i]}发生缺页置换出${Blocks[replaceIndex3]}`);
+                            Blocks[replaceIndex3] = ExecuPageSequen[i]; //发生缺页置换
+                        }
+                    } else {
+                        Result.push(`存在页面 ${ExecuPageSequen[i]}`);
+                    }
+                }
+                Result.unshift(`LFR算法执行情况为:物理块大小为: ${BlocksofSize} 执行的页面序列的长度为：${ExcuLen}置换次数为${CountMiss - BlocksofSize}  缺页次数为${CountMiss}命中率：${(1 - CountMiss / ExcuLen).toFixed(10)}`);
+                AllResult.push(`物理块大小为：${BlocksofSize} LFR算法执行情况:置换次数为${CountMiss - BlocksofSize} 缺页次数为${CountMiss} 命中率为：${(1 - CountMiss / ExcuLen).toFixed(10)}`);
+                let showResult = Result.slice().join(' | ');
+                let show = document.createElement("li");
+                show.innerHTML = `LFR算法的执行情况为: ${showResult}`;
+                Myshow.prepend(show);
+                console.log(BlocksofSize);
+
+            }
+
+            // 清除屏幕的函数
+            let clearscreen = function(ulElement) {
+                while (ulElement.firstChild) {
+                    ulElement.removeChild(ulElement.firstChild);
+                }
+                return;
+            }
+
+            // 展示所有结果
+            document.querySelector("#AllAlgorithm").addEventListener("click", function(e) {
+                clearscreen(Myshow);
+                const newResult = [...new Set(AllResult)];
+                for (let i in newResult) {
+                    let li = document.createElement('li');
+                    li.innerHTML = `${newResult[i]}`;
+                    Resultul.appendChild(li);
+                }
+            })
+        </script>
+</body>
+
+</html>

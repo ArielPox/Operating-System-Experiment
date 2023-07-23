@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>磁盘调度</title>
+</head>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: rgb(188, 219, 252);
+        color: rgb(97, 94, 93);
+        font-size: 14px;
+        font-family: Verdana, Arial, Helvetica, sans-serif;
+    }
+    
+    button {
+        border: none;
+    }
+    
+    table {
+        width: 800px;
+    }
+    
+    th,
+    tr,
+    td,
+    ul {
+        background-color: rgb(143, 178, 215);
+        padding: 5px 50px;
+        margin: 10px;
+        text-align: center;
+    }
+    
+    ul li {
+        padding: 5px;
+        text-align: center;
+        background-color: rgb(143, 178, 215);
+        list-style: none;
+    }
+    
+    .Show {
+        width: 800px;
+        background-color: rgb(196, 239, 222);
+        margin: auto;
+    }
+    
+    .Mybody {
+        width: 800px;
+        text-align: center;
+        line-height: 30px;
+    }
+</style>
+
+<body>
+    <div class="Show">
+        <table>
+            <caption class="Init"></caption>
+            <thead>
+                <th>进程名称</th>
+                <th>要求访问磁道号</th>
+            </thead>
+            <tbody class="Mybody"></tbody>
+        </table>
+        <ul id="showresult"></ul>
+    </div>
+    <script>
+        /*  定义一个进程的对象，包含进程的名称还有通道的数*/
+        class PCB {
+            constructor(name, location) {
+                this.name = name,
+                    this.location = location;
+            }
+        }
+        // 初始化当前移动手臂的位置还有运动方向
+        let armlocation = Math.floor(Math.random() * 200) + 1;
+        class moveArm {
+            constructor(location, derection) {
+                this.location = armlocation;
+                this.derection = "由外面向里面移动"
+            }
+        }
+        // 1.1生成4-8个通道在0-199的请求进程
+        let mybody = document.querySelector('.Mybody');
+        let initArm = document.querySelector(".Init");
+        let Num = Math.floor(Math.random() * 5) + 4;
+        let numbers = [];
+        //要保证生成的随机数是不一样的
+        while (numbers.length < Num) {
+            let randomNumber = Math.floor(Math.random() * 200) + 1;
+            if (!numbers.includes(randomNumber)) {
+                numbers.push(randomNumber);
+            }
+        }
+        let processes = [];
+        let nameSeed = "ABCDEFGH";
+        // 生成进程的请求序列
+        for (let i = 0; i < Num; i++) {
+            let pcb = new PCB(nameSeed[i], numbers[i]);
+            processes.push(pcb);
+        }
+
+        let movarm = new moveArm(armlocation);
+        console.log(movarm);
+        console.log(processes);
+        // 将初始化的数据显示在表格上面
+        initArm.innerHTML = `移动臂的初始状态为：${movarm.derection},处于的磁道：${movarm.location}`;
+        for (let i = 0; i < processes.length; i++) {
+            // 创建tr行
+            let tr = document.createElement('tr');
+            mybody.append(tr);
+            // 将进程对象中的属性读取到表格上面
+            for (let k in processes[i]) {
+                let td = document.createElement('td');
+                // 将属性的值放在单元格里面
+                td.innerHTML = processes[i][k];
+                tr.append(td);
+            }
+        }
+        /*---------------------- 2.算法实现区 -----------------------------*/
+
+        // 将请求序列排序
+        processes.sort((a, b) => a.location - b.location);
+        let Result = [],
+            recordposition = 0,
+            b
+        disdance = 0;
+        let SCAN = function() {
+            if (movarm.location <= processes[0].location) {
+                for (let i = 0, j = i + 1; j < processes.length && i < processes.length; i++) {
+                    Result.push(`处理进程：${processes[i].name}，移动距离：${processes[i].location - movarm.location}`);
+                    disdance += processes[i].location - movarm.location;
+                    movarm.location = processes[i].location;
+                }
+            } else if (movarm.location >= processes[processes.length - 1].location) {
+                for (let i = processes.length - 1; i >= 0; i--) {
+                    Result.push(`处理进程：${processes[i].name}，移动距离：${movarm.location - processes[i].location}`);
+                    disdance += movarm.location - processes[i].location;
+                    movarm.location = processes[i].location;
+                }
+                processes.reverse();
+            } else {
+                // 需要有来回的判断的时候要将下一次扫描的第一个值的下标记录下来
+                for (let i = 0; i < processes.length - 1; i++) {
+                    if (processes[i].location <= movarm.location && movarm.location < processes[i + 1].location) {
+                        recordposition = (movarm.location - processes[i].location) < (processes[i + 1].location - movarm.location) ? i + 1 : i;
+                    }
+                }
+                console.log(recordposition);
+
+                if (processes[recordposition].location < movarm.location) {
+                    // 1.先上后下的情况
+                    for (let i = recordposition + 1; i < processes.length; i++) {
+                        Result.push(`执行进程：${processes[i].name},移动：${processes[i].location - movarm.location}`);
+                        disdance += processes[i].location - movarm.location;
+                        movarm.location = processes[i].location;
+                    }
+                    for (let j = recordposition; j >= 0; j--) {
+                        Result.push(`执行进程：${processes[j].name},移动：${movarm.location - processes[j].location}`);
+                        disdance += movarm.location - processes[j].location
+                        movarm.location = processes[j].location;
+                    }
+                } else {
+                    // 先下后上的情况
+                    for (let j = recordposition - 1; j >= 0; j--) {
+                        Result.push(`执行进程：${processes[j].name},移动：${movarm.location - processes[j].location}`);
+                        disdance += movarm.location - processes[j].location
+                        movarm.location = processes[j].location;
+                    }
+                    for (let i = recordposition; i < processes.length; i++) {
+                        Result.push(`执行进程：${processes[i].name},移动：${processes[i].location - movarm.location}`);
+                        disdance += processes[i].location - movarm.location;
+                        movarm.location = processes[i].location;
+                    }
+
+                }
+            }
+        }
+        SCAN();
+        let ExeSequen = "";
+        console.log(Result);
+        Result.unshift(`执行的序列是:${ExeSequen}`);
+        Result.push(`移动的平均距离是${(disdance / processes.length).toFixed(1)}`);
+        let showRsult = document.querySelector('#showresult');
+        for (let i in Result) {
+            let li = document.createElement('li');
+            li.innerHTML = `${Result[i]}`;
+            showRsult.appendChild(li);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>银行家算法</title>
+
+</head>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: rgb(188, 219, 252);
+        color: rgb(97, 94, 93);
+        font-size: 14px;
+        font-family: Verdana, Arial, Helvetica, sans-serif;
+    }
+    
+    button {
+        border: none;
+    }
+    
+    table {
+        width: 800px;
+    }
+    
+    .mytable th,
+    tr {
+        background-color: rgb(143, 178, 215);
+        padding: 20px 50px;
+        margin: auto;
+        text-align: center;
+    }
+    
+    .Show {
+        width: 800px;
+        background-color: rgb(196, 239, 222);
+        margin: auto;
+    }
+    
+    .Mybody {
+        width: 800px;
+        text-align: center;
+        line-height: 30px;
+    }
+</style>
+
+<body>
+    <div class="Show">
+        <table>
+            <caption class="Avai"></caption>
+            <thead>
+                <th>进程名称</th>
+                <th>Max</th>
+                <th>Allocation</th>
+                <th>Need</th>
+            </thead>
+            <tbody class="Mybody"></tbody>
+        </table>
+        <button class="BtnClick" style="background-color: rgb(113, 192, 189);margin-left: 280px;">点输入资源号以及请求的资源数</button>
+        <div style="margin-left: 280px;">
+            <div class="Result" style="text-align:left;"></div>
+        </div>
+    </div>
+    <script>
+        /* ----------------------------------------各个进程的资源分配区域------------------------------------------ */
+        // 随机数随机选取进程的个数取值在4-8之间
+        let PcbOfLenth = Math.floor(Math.random() * 2) + 3;
+        console.log("进程的随机个数为：" + PcbOfLenth);
+
+        // 将可分配的资源也是随机出来基本都设置2-5之间的数，资源是一个资源向量，维度是3
+        let Available = [];
+        for (let i = 0; i < 3; i++) {
+            Available.push(Math.floor(Math.random() * 4) + 2);
+        }
+        console.log("可分配的志资源数为：")
+        console.log(Available);
+
+        // 定义 n 个进程对m资源的最大需求，采用随机数的方式将最大的需求量设置在0-9之间
+        let Max = [];
+        for (let i = 0; i < PcbOfLenth; i++) {
+            // 为随机出最大的资源分配数
+            let TempMax = [];
+            TempMax = [Math.floor(Math.random() * 10), Math.floor(Math.random() * 10), Math.floor(Math.random() * 10)];
+            Max.push(TempMax);
+        }
+        console.log("随机出最大的资源需求量为：");
+        console.log(Max);
+
+        // 定义 n 个进程当前已分配的m资源数 采用随机数的方式随机的随机数生成在0-8之间并且已经分配的资源数是小于最大的资源需求数量的
+        let Allocation = [];
+        for (let i = 0; i < PcbOfLenth; i++) {
+            let TempAllo = [Math.floor(Math.random() * Max[i][0]), Math.floor(Math.random() * Max[i][1]), Math.floor(Math.random() * Max[i][2]), ];
+            Allocation.push(TempAllo);
+        }
+        console.log("已经分陪的资源数量为：");
+        console.log(Allocation);
+
+        // 计算 n 个进程分别还需要的资源数
+        let Need = [];
+        for (let i = 0; i < Max.length; i++) {
+            let row = [];
+            for (let j = 0; j < Max[0].length; j++) {
+                row.push(Max[i][j] - Allocation[i][j]);
+            }
+            Need.push(row);
+        }
+        console.log("每个进程分别还需要资源数");
+        console.log(Need);
+
+
+        /* ----------------------------------------算法实现区域--------------------------------------- */
+        /* ----------------安全性算法------------------- */
+        function isSafe() {
+            // 将可分配的资源数量存放在work数组里面
+            let work = Available.slice();
+            // finish数组，长度与另一个数组 Max 的长度相同，并且每个元素的初始值都是false。
+            let finish = Array(Max.length).fill(false);
+            //设置一个安全序列
+            let safeSequence = [];
+
+            while (true) {
+                let found = false;y
+                for (let i = 0; i < Max.length; i++) {
+                    // 当当前进程还没有完成的同时需要的资源 小于相应的可利用的资源的数量就将进程加入到安全序列当中
+                    if (!finish[i] && Need[i].every((val, index) => val <= work[index])) {
+                        finish[i] = true;
+                        // 在进程可以分配到资源数量的时候将所拥有的所有的资源归还给可用资源
+                        work = work.map((val, index) => val + Allocation[i][index]);
+                        safeSequence.push(i);
+                        found = true;
+                    }
+                }
+
+                // 找不到一个安全的序列
+                if (!found) {
+                    break;
+                }
+            }
+
+            return finish.every(val => val === true);
+        }
+
+        /* -----------------------资源分配算法----------- */
+        function allocate(process, request) {
+            //先考虑资源请求数量高于最大需求和资源不够分配的情况
+            for (let i = 0; i < request.length; i++) {
+                if (request[i] > Need[process][i]) {
+                    return (`进程 ${process} 请求资源数大于最大所需的资源数`);
+                    // return;
+                }
+                if (request[i] > Available[i]) {
+                    return (`进程${process}必须等待，可用资源数小于请求资源数`);
+
+                }
+            }
+            for (let i = 0; i < request.length; i++) {
+                Available[i] -= request[i];
+                Allocation[process][i] += request[i];
+                Need[process][i] -= request[i];
+            }
+            if (isSafe()) {
+                let safe = "";
+                safe = `进程${process}请求资源成功` + "<br>" + `Available: ${Available}` + "<br>" + `Allocation: ${Allocation}` + "<br>" + `Need: ${Need}`;
+                return safe;
+            } else {
+                return `进程${process}申请资源失败`;
+                for (let i = 0; i < request.length; i++) {
+                    Available[i] += request[i];
+                    Allocation[process][i] -= request[i];
+                    Need[process][i] += request[i];
+                }
+            }
+        }
+
+        /* -------------------------------可视化区域----------------------------------------*/
+        let myTable = document.querySelector('.Mybody');
+        let Avai = document.querySelector('.Avai');
+        Avai.innerHTML = `可用资源数${Available}`;
+        for (let i = 0; i < PcbOfLenth; i++) {
+            let tr = document.createElement('tr');
+            let td1 = document.createElement('td');
+            td1.innerHTML = i + 1;
+            tr.appendChild(td1);
+            let td2 = document.createElement('td');
+            td2.innerHTML = Max[i];
+            tr.appendChild(td2);
+            let td3 = document.createElement('td');
+            td3.innerHTML = Allocation[i];
+            tr.appendChild(td3);
+            let td4 = document.createElement('td');
+            td4.innerHTML = Need[i];
+            tr.appendChild(td4);
+            myTable.appendChild(tr);
+        }
+
+        // 为按钮创建点击事件 分别从键盘上得到 进程的编号 还有request的资源数量
+        let BtnClick = document.querySelector('.BtnClick');
+        console.log(BtnClick);
+        BtnClick.addEventListener('click', function() {
+            let id = prompt("请输入发出请求的进程的编号") - 1;
+            let request = [];
+            for (let i = 0; i < 3; i++) {
+                let temp = prompt(`输入请求资源${i + 1}`)
+                request.push(temp);
+            }
+            let ResultShow = document.querySelector('.Result');
+            let text = document.createElement('h3');
+            text.innerHTML = allocate(id, request);
+            ResultShow.appendChild(text);
+        })
+    </script>
+</body>
+
+</html>

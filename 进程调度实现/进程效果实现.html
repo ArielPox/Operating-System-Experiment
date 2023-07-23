@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="../进程调度实现/js/jquery.min.js"></script>
+    <link rel="stylesheet" href="../进程调度实现/js/my.css">
+    <script src="../进程调度实现/js/test1.js"></script>
+
+    <title>进程调度</title>
+</head>
+
+<body>
+    <div class="show">
+        <p style="background-color: rgb(250, 230, 234);">[提示]每调用一次算法，要刷新一次页面</p>
+        <!-- 1.进程的展示区 -->
+        <table class="mytable">
+            <tr>
+                <th>进程名称</th>
+                <th>到达时间</th>
+                <th>执行时间</th>
+                <th>优先级</th>
+                <th>剩余时间</th>
+            </tr>
+        </table>
+        <!-- 2.进程的调度区，使用按钮监听的方式将优先级调度方法和时间片轮转法区分开 -->
+        <div class="choose">
+            <div>
+                <button class="PrioritySchedule">点击优先调度演示</button>
+                <button class="RoundRobinSchedule">点击轮转调度方法的实现</button>
+            </div>
+        </div>
+
+        <div class="Schedule">
+            <!-- 2.优先级调度实现 -->
+            <div class="PriorityScheduleShow">
+                <ul id="PriShow">
+                </ul>
+            </div>
+            <!-- 3.轮转调度法 -->
+            <div class="RoundRobinScheduleShow">
+                <ul id="RoundRobinShow"></ul>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
